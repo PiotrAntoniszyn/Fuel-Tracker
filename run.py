@@ -5,6 +5,7 @@ Simple runner script to start the Fuel Tracker app
 import subprocess
 import sys
 import os
+import streamlit as st
 from pathlib import Path
 
 def check_requirements():
@@ -22,26 +23,31 @@ def check_requirements():
         return False
 
 def check_environment():
-    """Check if environment variables are set"""
-    env_file = Path(".env")
-    if not env_file.exists():
-        print("❌ .env file not found")
-        print("Please copy .env.example to .env and add your Supabase credentials")
-        return False
-    
-    # Try to load and check env vars
+    """Check if Streamlit secrets are configured"""
     try:
-        from dotenv import load_dotenv
-        load_dotenv()
-        
-        if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_KEY"):
-            print("❌ SUPABASE_URL or SUPABASE_KEY not set in .env file")
+        # Check if secrets.toml exists
+        secrets_file = Path(".streamlit/secrets.toml")
+        if not secrets_file.exists():
+            print("❌ secrets.toml file not found")
+            print("Please create a secrets.toml file with your Supabase credentials")
             return False
         
-        print("✅ Environment variables are set")
+        # Try to access Streamlit secrets
+        supabase_url = st.secrets["SUPABASE_URL"]
+        supabase_key = st.secrets["SUPABASE_KEY"]
+        
+        if not supabase_url or not supabase_key:
+            print("❌ SUPABASE_URL or SUPABASE_KEY not set in secrets.toml")
+            return False
+        
+        print("✅ Streamlit secrets are configured")
         return True
+    except KeyError as e:
+        print(f"❌ Missing secret: {e}")
+        print("Please add SUPABASE_URL and SUPABASE_KEY to secrets.toml")
+        return False
     except Exception as e:
-        print(f"❌ Error loading environment: {e}")
+        print(f"❌ Error loading secrets: {e}")
         return False
 
 def run_app():

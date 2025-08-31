@@ -3,15 +3,10 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import os
-from dotenv import load_dotenv
 from supabase import create_client, Client
 from typing import List, Dict, Optional
 import numpy as np
 from auth import SimpleAuth
-
-# Load environment variables
-load_dotenv()
 
 # Page config for PWA
 st.set_page_config(
@@ -75,12 +70,19 @@ st.markdown("""
 # Initialize Supabase client
 @st.cache_resource
 def init_supabase():
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_KEY")
-    if not url or not key:
-        st.error("Please set SUPABASE_URL and SUPABASE_KEY in your .env file")
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+        if not url or not key:
+            st.error("Please set SUPABASE_URL and SUPABASE_KEY in your secrets.toml file")
+            st.stop()
+        return create_client(url, key)
+    except KeyError as e:
+        st.error(f"Missing secret: {e}. Please add SUPABASE_URL and SUPABASE_KEY to secrets.toml")
         st.stop()
-    return create_client(url, key)
+    except Exception as e:
+        st.error(f"Error loading secrets: {e}")
+        st.stop()
 
 supabase: Client = init_supabase()
 
@@ -454,12 +456,22 @@ def analytics():
 def main():
     """Main application"""
     
-    # Check if environment variables are set
-    if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_KEY"):
-        st.error("Please set up your Supabase credentials in the .env file")
+    # Check if Streamlit secrets are set
+    try:
+        if not st.secrets.get("SUPABASE_URL") or not st.secrets.get("SUPABASE_KEY"):
+            st.error("Please set up your Supabase credentials in the secrets.toml file")
+            st.code("""
+            # secrets.toml
+            SUPABASE_URL="your_supabase_url_here"
+            SUPABASE_KEY="your_supabase_anon_key_here"
+            """)
+            st.stop()
+    except Exception as e:
+        st.error("Please create a secrets.toml file with your Supabase credentials")
         st.code("""
-        SUPABASE_URL=your_supabase_url_here
-        SUPABASE_KEY=your_supabase_anon_key_here
+        # secrets.toml
+        SUPABASE_URL="your_supabase_url_here"
+        SUPABASE_KEY="your_supabase_anon_key_here"
         """)
         st.stop()
     
